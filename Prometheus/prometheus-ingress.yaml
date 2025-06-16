@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ingress
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/group.name: eks-devtest-lb
+    alb.ingress.kubernetes.io/subnets: subnet-0a3043a2ad9bd85a7, subnet-03c8d8c9fc4dc6c23
+spec:
+  rules:
+  - host: dev-prometheus.nirmata.co
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus-gateway
+            port:
+              number: 8080 

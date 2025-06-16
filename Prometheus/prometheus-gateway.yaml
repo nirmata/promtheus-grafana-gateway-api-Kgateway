@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: prometheus-gateway
+  namespace: monitoring
+spec:
+  gatewayClassName: kgateway
+  infrastructure:
+    parametersRef:
+      name: prometheus-gateway-params
+      group: gateway.kgateway.dev
+      kind: GatewayParameters
+  listeners:
+  - name: http
+    port: 8080
+    protocol: HTTP
+    hostname: dev-prometheus.nirmata.co
+    allowedRoutes:
+      namespaces:
+        from: Same 
