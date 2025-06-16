@@ -1,0 +1,112 @@
+# Testing Commands for Prometheus and Grafana Gateway Setup
+
+## Load Balancer Details
+ALB DNS: k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com
+ALB Port: 80 (HTTP)
+
+## 🔥 Prometheus Testing
+
+### Main Application Tests
+```bash
+# Test Prometheus main application (expect HTTP 200)
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/ -H "Host: dev-prometheus.nirmata.co"
+
+# Test Prometheus with specific path
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/graph -H "Host: dev-prometheus.nirmata.co"
+
+# Test Prometheus API endpoint
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/api/v1/status/config -H "Host: dev-prometheus.nirmata.co"
+```
+
+### Health Check Tests
+```bash
+# Test Prometheus health check (expect HTTP 200 with body "OK")
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/healthz -H "Host: dev-prometheus.nirmata.co"
+
+# Test with verbose output
+curl.exe -v k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/healthz -H "Host: dev-prometheus.nirmata.co"
+```
+
+## 📊 Grafana Testing
+
+### Main Application Tests
+```bash
+# Test Grafana main application (expect HTTP 302 redirect to /login)
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/ -H "Host: grafana-devtest.nirmata.co"
+
+# Test Grafana login page (follow redirect)
+curl.exe -L k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/login -H "Host: grafana-devtest.nirmata.co"
+
+# Test Grafana API endpoint
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/api/health -H "Host: grafana-devtest.nirmata.co"
+```
+
+### Health Check Tests
+```bash
+# Test Grafana health check (expect HTTP 200 with body "Grafana Gateway OK")
+curl.exe -i k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/healthz -H "Host: grafana-devtest.nirmata.co"
+
+# Test with verbose output
+curl.exe -v k8s-eksdevtestlb-1aee04181b-1372915356.us-west-2.elb.amazonaws.com/healthz -H "Host: grafana-devtest.nirmata.co"
+```
+
+## 🔍 Browser Testing URLs
+
+### Prometheus Browser Access
+- Main: http://dev-prometheus.nirmata.co (use HTTP, not HTTPS)
+- Targets: http://dev-prometheus.nirmata.co/targets
+- Graph: http://dev-prometheus.nirmata.co/graph
+
+### Grafana Browser Access  
+- Main: http://grafana-devtest.nirmata.co (use HTTP, not HTTPS)
+- Login: http://grafana-devtest.nirmata.co/login
+
+## ⚠️ Important Notes
+
+1. **Use HTTP, not HTTPS** - Our setup uses HTTP on port 80
+2. **Host headers are required** - Each service responds only to its specific hostname
+3. **Expected responses:**
+   - Prometheus main: HTTP 200 with Prometheus UI
+   - Grafana main: HTTP 302 redirect to /login
+   - Health checks: HTTP 200 with custom response body
+
+## 🛠️ Kubectl Status Commands
+
+### Check Gateway Status
+```bash
+kubectl get gateway prometheus-gateway -n monitoring
+kubectl get gateway grafana-gateway -n grafana
+```
+
+### Check Pod Status
+```bash
+kubectl get pods -n monitoring | grep prometheus-gateway
+kubectl get pods -n grafana | grep grafana-gateway
+```
+
+### Check HTTPRoute Status
+```bash
+kubectl get httproute -n monitoring
+kubectl get httproute -n grafana
+```
+
+### Check Services
+```bash
+kubectl get svc -n monitoring | grep prometheus
+kubectl get svc -n grafana | grep grafana
+```
+
+### Check DirectResponse Resources
+```bash
+kubectl get directresponse -A
+kubectl describe directresponse prometheus-healthz -n monitoring
+kubectl describe directresponse grafana-healthz -n grafana
+```
+
+## 🌐 Domain Configuration
+
+The ALB routes traffic based on Host headers:
+- `dev-prometheus.nirmata.co` → Prometheus Gateway → Prometheus Service
+- `grafana-devtest.nirmata.co` → Grafana Gateway → Grafana Service
+
+
