@@ -1,0 +1,29 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  name: grafana-healthz
+  namespace: grafana
+spec:
+  status: 200
+  body: "Grafana Gateway OK"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-healthz-route
+  namespace: grafana
+spec:
+  parentRefs:
+  - name: grafana-gateway
+    namespace: grafana
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /healthz
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        name: grafana-healthz
+        group: gateway.kgateway.dev
+        kind: DirectResponse 

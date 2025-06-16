@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: grafana-gateway
+  namespace: grafana
+spec:
+  gatewayClassName: kgateway
+  infrastructure:
+    parametersRef:
+      name: grafana-gateway-params
+      group: gateway.kgateway.dev
+      kind: GatewayParameters
+  listeners:
+  - name: http
+    port: 8080
+    protocol: HTTP
+    hostname: grafana-devtest.nirmata.co
+    allowedRoutes:
+      namespaces:
+        from: Same 
