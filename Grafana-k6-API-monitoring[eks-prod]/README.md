@@ -1,4 +1,6 @@
-# k6 API Monitoring (production)
+# k6 API Monitoring 
+
+Synthetic monitoring of Nirmata production APIs with k6, Prometheus, Alertmanager and Grafana.
 
 Two k6 CronJobs call 8 API endpoints on `https://www.nirmata.io` every 5 minutes (1 user, 1 minute, read-only GETs).
 Each probe writes its results to one replica of the `prometheus-new` Prometheus on **eks-prod**. Prometheus evaluates
@@ -55,7 +57,7 @@ One FIRING and one RESOLVED message per alert; reminders every 4 h while it last
 - Secret `alertmanager-slack-loki` (key `webhook-url`) listed in the Alertmanager `spec.secrets`
 - A read-only Nirmata API key for www.nirmata.io
 
-## Deploy (cluster: eks-prod, namespace `monitoring`)
+## Deploy (eks-prod, namespace `monitoring`)
 
 ```bash
 kubectl config current-context        # must end in cluster/eks-prod
