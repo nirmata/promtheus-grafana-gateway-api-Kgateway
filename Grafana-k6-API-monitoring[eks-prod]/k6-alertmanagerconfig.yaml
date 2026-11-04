@@ -1,0 +1,33 @@
+# Routes k6 probe alerts (label probe="k6") to #loki-alerts using the webhook
+# already stored in Secret alertmanager-slack-loki (key: webhook-url).
+# The Prometheus Operator adds a namespace="monitoring" matcher automatically,
+# so the k6 alert rules carry a namespace: monitoring label.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: k6-api-probe-slack
+  namespace: monitoring
+spec:
+  route:
+    receiver: k6-slack
+    groupBy: ["alertname", "service"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    matchers:
+      - name: probe
+        value: k6
+        matchType: "="
+  receivers:
+    - name: k6-slack
+      slackConfigs:
+        - apiURL:
+            name: alertmanager-slack-loki
+            key: webhook-url
+          # no channel override: the webhook posts to its own channel (#loki-alerts)
+          sendResolved: true
+          title: '[{{ .Status | toUpper }}] Nirmata API (k6): {{ .CommonLabels.alertname }}'
+          text: |-
+            {{ range .Alerts }}*{{ .Annotations.summary }}* (`{{ .Labels.severity }}`)
+            {{ .Annotations.description }}
+            {{ end }}

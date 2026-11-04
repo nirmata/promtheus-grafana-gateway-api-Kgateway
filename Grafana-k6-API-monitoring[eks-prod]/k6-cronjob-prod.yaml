@@ -1,0 +1,145 @@
+# Two identical probes, one per Prometheus replica.
+# prometheus-new runs 2 replicas that each evaluate the alert rules on their own data.
+# Remote write through the Service lands on only one replica per run, so each probe
+# writes directly to one replica and both replicas always see every result.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: k6-api-probe-r0
+  namespace: monitoring
+  labels:
+    app: k6-api-probe
+    prometheus-replica: '0'
+spec:
+  schedule: '*/5 * * * *'
+  suspend: false
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 240
+      template:
+        metadata:
+          labels:
+            app: k6-api-probe
+            prometheus-replica: '0'
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: k6
+            image: grafana/k6:1.8.1
+            args:
+            - run
+            - --quiet
+            - -o
+            - experimental-prometheus-rw
+            - /scripts/probe.js
+            env:
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://prometheus-prometheus-new-kube-promet-prometheus-0.prometheus-operated.monitoring.svc:9090/api/v1/write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: p(95),p(99),avg,max
+            - name: K6_NO_USAGE_REPORT
+              value: 'true'
+            - name: BASE_URL
+              value: https://www.nirmata.io
+            - name: NIRMATA_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: k6-probe-secrets
+                  key: api-token
+            volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+            securityContext:
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+          volumes:
+          - name: scripts
+            configMap:
+              name: k6-probe-script
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: k6-api-probe-r1
+  namespace: monitoring
+  labels:
+    app: k6-api-probe
+    prometheus-replica: '1'
+spec:
+  schedule: '*/5 * * * *'
+  suspend: false
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 240
+      template:
+        metadata:
+          labels:
+            app: k6-api-probe
+            prometheus-replica: '1'
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: k6
+            image: grafana/k6:1.8.1
+            args:
+            - run
+            - --quiet
+            - -o
+            - experimental-prometheus-rw
+            - /scripts/probe.js
+            env:
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://prometheus-prometheus-new-kube-promet-prometheus-1.prometheus-operated.monitoring.svc:9090/api/v1/write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: p(95),p(99),avg,max
+            - name: K6_NO_USAGE_REPORT
+              value: 'true'
+            - name: BASE_URL
+              value: https://www.nirmata.io
+            - name: NIRMATA_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: k6-probe-secrets
+                  key: api-token
+            volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+            securityContext:
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+          volumes:
+          - name: scripts
+            configMap:
+              name: k6-probe-script

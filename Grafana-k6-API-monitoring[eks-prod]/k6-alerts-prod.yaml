@@ -1,0 +1,59 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: k6-api-probe-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus-new          # matches eks-prod Prometheus ruleSelector
+spec:
+  groups:
+    - name: k6-api-probe
+      rules:
+        # k6 reports only while a run is active (1 min every 5 min),
+        # so each expression looks back over a 10-15 min window.
+        # Thresholds are proposals pending Anubhav's confirmation.
+
+        - alert: NirmataApiHighLatency
+          expr: max by (service) (max_over_time(k6_http_req_duration_p95{service!="users"}[10m])) > 2
+          for: 10m
+          labels:
+            severity: warning
+            probe: k6
+            namespace: monitoring      # needed for the AlertmanagerConfig route
+          annotations:
+            summary: "High API latency on {{ $labels.service }}"
+            description: "p95 latency for {{ $labels.service }} is {{ $value | humanizeDuration }} (threshold 2s)."
+
+        - alert: NirmataUsersApiHighLatency
+          # users is slower by design (p95 ~3.6s on staging), so it gets its own limit
+          expr: max by (service) (max_over_time(k6_http_req_duration_p95{service="users"}[10m])) > 5
+          for: 10m
+          labels:
+            severity: warning
+            probe: k6
+            namespace: monitoring      # needed for the AlertmanagerConfig route
+          annotations:
+            summary: "High API latency on users"
+            description: "p95 latency for users is {{ $value | humanizeDuration }} (threshold 5s)."
+
+        - alert: NirmataApiErrors
+          expr: max by (service) (max_over_time(k6_http_req_failed_rate[10m])) > 0.05
+          for: 10m
+          labels:
+            severity: critical
+            probe: k6
+            namespace: monitoring      # needed for the AlertmanagerConfig route
+          annotations:
+            summary: "API errors on {{ $labels.service }}"
+            description: "More than 5% of k6 requests to {{ $labels.service }} are failing."
+
+        - alert: K6ProbeNotReporting
+          expr: absent_over_time(k6_http_reqs_total[15m])
+          for: 5m
+          labels:
+            severity: warning
+            probe: k6
+            namespace: monitoring      # needed for the AlertmanagerConfig route
+          annotations:
+            summary: "k6 API probe has stopped reporting"
+            description: "No k6 metrics for 15+ minutes. Check the k6-api-probe CronJob in the monitoring namespace on eks-prod."
